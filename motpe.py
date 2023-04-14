@@ -109,7 +109,7 @@ def nondominated_sort(points):
     ranks = np.zeros(len(points))
     r = 0
     c = len(points)
-    print("points:", points.shape, points)
+    # print("points:", points.shape, points)
     while c > 0:
         extended = np.tile(points, (points.shape[0], 1, 1))
         # print("extended:", extended.shape, extended[0])
@@ -124,11 +124,10 @@ def nondominated_sort(points):
         ranks[dominance == 0] = r
         r += 1
         c -= np.sum(dominance == 0) # how many points are sorted as rank = r
-        print("c:", c)
-        print("points changed", points)
+        # print("c:", c)
+        # print("points changed", points)
     # print("ranks:", ranks)
     # print("points", np.argsort(tmp_points[:,0]) + np.argsort(tmp_points[:,1]))
-    exit(0)
     return ranks
 
 
@@ -379,6 +378,8 @@ class TPESampler:
 
         # Determine the type of the hyperparameter.
         var_type = self._distribution_type()
+        # print("var_type", var_type)
+        # exit(0)
 
         # Sample a hyperparameter value.
         if var_type in [float, int]:
@@ -392,16 +393,18 @@ class TPESampler:
         # dont use cache this way!!!
         if SPLITCACHE_KEY in self.split_cache:
             # print(self.split_cache)
-            # exit(0)
             lower_indices = self.split_cache[SPLITCACHE_KEY]['lower_indices']
             upper_indices = self.split_cache[SPLITCACHE_KEY]['upper_indices']
         else:
             rank = nondominated_sort(ys)
             indices = np.array(range(len(ys)))
+    
+            # exit(0)
             lower_indices = np.array([], dtype=int)
 
             # nondominance rank-based selection
             i = 0
+            # while len(D_l) + len(rank == i) <= n_lower:
             while len(lower_indices) + sum(rank == i) <= n_lower:
                 lower_indices = np.append(lower_indices, indices[rank == i])
                 i += 1
@@ -410,6 +413,9 @@ class TPESampler:
             ys_r = ys[rank == i] # select the front
             indices_r = indices[rank == i] # select the front
             worst_point = np.max(ys, axis=0) # find the worst point
+            # print("worst point: ", worst_point)
+
+            # what is this max (max(1.1 * worst_point, 0.9 * worst_point), eps) for?
             reference_point = np.maximum(
                 np.maximum(
                     1.1 * worst_point, # case: value > 0
@@ -434,6 +440,7 @@ class TPESampler:
                     p_q = np.max([ys_r[index], ys_r[j]], axis=0)
                     contributions[j] = contributions[j] \
                         - (hypervolume(S + [p_q]).compute(reference_point) - hv_S)
+                    
                 S = S + [ys_r[index]]
                 lower_indices = np.append(lower_indices, indices_r[index])
             upper_indices = np.setdiff1d(indices, lower_indices)
