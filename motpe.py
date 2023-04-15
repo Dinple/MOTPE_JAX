@@ -153,11 +153,15 @@ class GaussKernel:
     def __init__(self, mu, sigma, lb, ub, q):
         self.mu = mu
         self.sigma = max(sigma, eps)
+        # q is never used
         self.lb, self.ub, self.q = lb, ub, q
-        self.norm_const = 1.  # do not delete! this line is needed
+        # cdf depends on the norm_const
+        # this is just the 1 in the 1/(sigma * sqrt(2 * pi)) part, why do we need this?
         self.norm_const = 1. / (self.cdf(ub) - self.cdf(lb))
+        # print("# 2 norm_const:", self.norm_const)
 
     def pdf(self, x):
+        # q ensure this is trucated normal distribution?
         if self.q is None:
             z = 2.50662827 * self.sigma  # np.sqrt(2 * np.pi) * self.sigma
             mahalanobis = ((x - self.mu) / self.sigma) ** 2
@@ -179,7 +183,12 @@ class GaussKernel:
 
     def cdf(self, x):
         z = (x - self.mu) / (1.41421356 * self.sigma)  # (x - self.mu) / (np.sqrt(2) * self.sigma)
-        return np.maximum(self.norm_const * 0.5 * (1. + scipy.special.erf(z)), eps)
+
+        # fix the awkward behavior norm const
+        if not hasattr(self, 'norm_const'):
+            return np.maximum(1 * 0.5 * (1. + scipy.special.erf(z)), eps)
+        else:
+            return np.maximum(self.norm_const * 0.5 * (1. + scipy.special.erf(z)), eps)
 
     def sample_from_kernel(self, rng):
         while True:
@@ -195,6 +204,8 @@ class AitchisonAitkenKernel:
         self.top = top
 
     def cdf(self, x):
+        # this seems contradicts to the definition
+        # needs additional testing
         if x == self.choice:
             return self.top
         elif 0 <= x <= self.n_choices - 1:
@@ -222,7 +233,22 @@ class AitchisonAitkenKernel:
         return np.array([self.cdf(n) for n in range(self.n_choices)])
 
     def sample_from_kernel(self, rng):
+        # Draw a number from the multinomial distribution.
+        # NOT USED
         choice_one_hot = rng.multinomial(n=1, pvals=self.probabilities(), size=1)
+        # The multinomial distribution is a generalization of the binomial distribution.
+        # The multinomial distribution has the following parameters:
+        # n: number of trials
+        # pvals: probabilities of each of the n trials
+        # size: number of times to sample the distribution
+        # The output of rng.multinomial is a two-dimensional array.
+        # The first dimension is the number of times the distribution was sampled.
+        # The second dimension is the number of trials.
+        # The value in each row and column is the number of times that trial was chosen.
+        # The value of choice_one_hot is [[0, 0, 1, 0]] because the third trial was chosen.
+        # The dot product of the one-hot vector and the vector [0, 1, 2, 3] is 2.
+        # This is the index of the choice that was made.
+        print("choice_one_hot:", choice_one_hot)
         return np.dot(choice_one_hot, np.arange(self.n_choices))[0]
 
 
@@ -257,7 +283,7 @@ class UniformKernel:
 
     def sample_from_kernel(self, rng):
         choice_one_hot = rng.multinomial(n=1, pvals=self.probabilities(), size=1)
-        return np.dot(choice_one_hot, np.arange(self.n_choices))[0]
+        return np.dot(choice_one_hot, np.arange(self.n_choKernelices))[0]
 
 
 class NumericalParzenEstimator:
@@ -379,7 +405,6 @@ class TPESampler:
         # Determine the type of the hyperparameter.
         var_type = self._distribution_type()
         # print("var_type", var_type)
-        # exit(0)
 
         # Sample a hyperparameter value.
         if var_type in [float, int]:
@@ -399,7 +424,6 @@ class TPESampler:
             rank = nondominated_sort(ys)
             indices = np.array(range(len(ys)))
     
-            # exit(0)
             lower_indices = np.array([], dtype=int)
 
             # nondominance rank-based selection
