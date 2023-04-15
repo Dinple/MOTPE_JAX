@@ -461,7 +461,11 @@ class TPESampler:
                 for j in range(len(contributions)):
                     if j == index:
                         continue
+                    # replace each entry of the most contributed points if there are worst objective val achieved
                     p_q = np.max([ys_r[index], ys_r[j]], axis=0)
+                    # b_q = np.max([ys_r[0], ys_r[j]], axis=0)
+                    # print("p_q: ", p_q, ys_r[index], ys_r[j])
+                    # print("b_q: ", p_q, ys_r[0], ys_r[j])
                     contributions[j] = contributions[j] \
                         - (hypervolume(S + [p_q]).compute(reference_point) - hv_S)
                     
