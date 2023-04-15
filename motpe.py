@@ -452,22 +452,30 @@ class TPESampler:
             contributions = []
             for j in range(len(ys_r)):
                 contributions.append(hypervolume([ys_r[j]]).compute(reference_point))
+            # print("contributions: ", contributions)
+            # print("check greatest contribution: ", np.argmax(contributions), hypervolume(ys_r).greatest_contributor(reference_point))
+            # exit(0)
+            # tmp_ys_r = ys_r.copy()
+            # while len(lower_indices) + 1 <= n_lower:
+                
+
             while len(lower_indices) + 1 <= n_lower:
                 hv_S = 0
                 if len(S) > 0:
                     hv_S = hypervolume(S).compute(reference_point)
+                # one who makes the greatest contribution is always propotion to the one who has the greatest HV?
                 index = np.argmax(contributions)
-                contributions[index] = -1e9  # mark as already selected
+                contributions[index] = -1e5  # mark as already selected
                 for j in range(len(contributions)):
                     if j == index:
                         continue
                     # replace each entry of the most contributed points if there are worst objective val achieved
+                    # point of intersection between each other sample and the current selected point
                     p_q = np.max([ys_r[index], ys_r[j]], axis=0)
                     # b_q = np.max([ys_r[0], ys_r[j]], axis=0)
                     # print("p_q: ", p_q, ys_r[index], ys_r[j])
                     # print("b_q: ", p_q, ys_r[0], ys_r[j])
-                    contributions[j] = contributions[j] \
-                        - (hypervolume(S + [p_q]).compute(reference_point) - hv_S)
+                    contributions[j] = contributions[j] - (hypervolume(S + [p_q]).compute(reference_point) - hv_S)
                     
                 S = S + [ys_r[index]]
                 lower_indices = np.append(lower_indices, indices_r[index])
